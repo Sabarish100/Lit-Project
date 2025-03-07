@@ -21,20 +21,23 @@ export class Dashboard extends LitElement {
       background: #333;
       color: white;
       padding: 20px;
+      font-size: 20px;
+      font-weight: bold;
     }
 
     main {
       flex-grow: 1;
       background: #f4f4f4;
-      padding: 20px;
-
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .card-container {
       display: flex;
       gap: 20px;
-      margin: 10px;
       justify-content: center;
+      flex-wrap: wrap;
     }
 
     .card {
@@ -47,13 +50,18 @@ export class Dashboard extends LitElement {
       font-size: 18px;
       font-weight: bold;
       cursor: pointer;
-      opacity:80%;
+      opacity: 0.8;
+      transition: transform 0.3s ease-in-out, opacity 0.3s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
     }
 
-    .card:hover {
-      transform: scale(1.025);
-      transition: 0.3s ease-in-out;
-      opacity:100%;
+    .card:hover, .card:focus {
+      transform: scale(1.05);
+      opacity: 1;
     }
 
     .card img {
@@ -63,40 +71,73 @@ export class Dashboard extends LitElement {
       margin-top: 10px;
     }
 
-    
-  `;
+    .card[role="button"] {
+      outline: none;
+    }
 
-  private selectSystem(system: string) {
-    this.selectedSystem = system;
-  }
+    footer {
+      font-size: 16px;
+    }
+  `;
 
   render() {
     return html`
       <header>Dashboard</header>
       <main>
-      ${this.selectedSystem === null ? html`
-        <div class="card-container">
-          <div class="card" @click="${() => this.selectSystem('user-management')}">
-            User Management System
-            <img src="./src/photos/4393.jpg" alt="User Management Image">
-          </div>
-          <div class="card"  @click="${() => this.selectSystem('product-management')}">
-            Product Management System
-            <img src="./src/photos/1329.webp" alt="Product Management Image">
-          </div>
-        </div>
-        ` : this.renderSystemDetails()}
+        ${this.selectedSystem === null 
+          ? this.renderSelection() 
+          : this.renderSystemDetails()}
       </main>
       <footer>Footer</footer>
     `;
   }
 
+  private renderSelection() {
+    return html`
+      <div class="card-container">
+        <div 
+          class="card" 
+          role="button" 
+          tabindex="0" 
+          @click="${this.selectUserManagement}" 
+          @keydown="${this.handleKeydown}">
+          User Management System
+          <img src="./src/photos/4393.jpg" alt="User Management">
+        </div>
+        <div 
+          class="card" 
+          role="button" 
+          tabindex="0" 
+          @click="${this.selectProductManagement}" 
+          @keydown="${this.handleKeydown}">
+          Product Management System
+          <img src="./src/photos/1329.webp" alt="Product Management">
+        </div>
+      </div>
+    `;
+  }
+
   private renderSystemDetails() {
-    if (this.selectedSystem === 'user-management') {
-      return html`<user-management @back="${() => this.selectedSystem = null}"></user-management>`;
-    } else if (this.selectedSystem === 'product-management') {
-      return html`<product-management @back="${() => this.selectedSystem = null}"></product-management>`;
+    return this.selectedSystem === 'user-management'
+      ? html`<user-management @back="${this.resetSelection}"></user-management>`
+      : html`<product-management @back="${this.resetSelection}"></product-management>`;
+  }
+
+  private resetSelection() {
+    this.selectedSystem = null;
+  }
+
+  private selectUserManagement() {
+    this.selectedSystem = 'user-management';
+  }
+
+  private selectProductManagement() {
+    this.selectedSystem = 'product-management';
+  }
+
+  private handleKeydown(event: KeyboardEvent) {
+    if (event.key === 'Enter' || event.key === ' ') {
+      (event.currentTarget as HTMLElement).click();
     }
-    return html``;
   }
 }
