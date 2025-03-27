@@ -1,13 +1,13 @@
 import { LitElement, html, css } from "lit";
-import { customElement, state } from "lit/decorators.js";
+import { customElement, property } from "lit/decorators.js";
 import "./user-table";
 import "./add-user-popup";
 import { User } from "./types";
 
 @customElement("user-management")
 export class UserManagement extends LitElement {
-  @state() users: User[] = [];
-  @state() showPopup: boolean = false;
+  @property() users: User[] = [];
+  @property() showPopup: boolean = false;
 
   static styles = css`
     :host {
@@ -26,7 +26,7 @@ export class UserManagement extends LitElement {
       align-items: center;
       margin-bottom: 15px;
     }
-    .add-user-btn {
+    .add-user-btn, .back-btn {
       background: #28a745;
       color: white;
       padding: 8px 12px;
@@ -37,6 +37,12 @@ export class UserManagement extends LitElement {
     }
     .add-user-btn:hover {
       background: #218838;
+    }
+    .back-btn {
+      background: #dc3545;
+    }
+    .back-btn:hover {
+      background: #c82333;
     }
   `;
 
@@ -66,36 +72,39 @@ export class UserManagement extends LitElement {
   }
 
   private handleUserAdded(event: CustomEvent) {
-    this.users = [...this.users, event.detail.user]; // Add new user
-    this.showPopup = false; // Close popup after adding user
+    this.users = [...this.users, event.detail.user];
+    this.closePopup();
   }
 
   private openPopup() {
-    this.showPopup = true; // Show the popup
+    this.showPopup = true;
+    this.requestUpdate(); // Ensure reactivity updates
   }
 
   private closePopup() {
-    this.showPopup = false; // Hide the popup
+    this.showPopup = false;
+    this.requestUpdate();
+  }
+
+  private goBack() {
+    this.dispatchEvent(new CustomEvent("back", { bubbles: true, composed: true }));
   }
 
   render() {
     return html`
       <div class="container">
         <div class="top-bar">
+          <button class="back-btn" @click="${this.goBack}">Back</button>
           <h2>User Management</h2>
           <button class="add-user-btn" @click="${this.openPopup}">Add User</button>
         </div>
         <user-table .users="${this.users}"></user-table>
 
-        ${this.showPopup
-          ? html`
-              <add-user-popup
-                .showPopup="${this.showPopup}"
-                @close-popup="${this.closePopup}"
-                @user-added="${this.handleUserAdded}">
-              </add-user-popup>
-            `
-          : ""}
+        <add-user-popup
+          .showPopup="${this.showPopup}"
+          @close-popup="${this.closePopup}"
+          @user-added="${this.handleUserAdded}">
+        </add-user-popup>
       </div>
     `;
   }

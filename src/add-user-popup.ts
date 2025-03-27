@@ -1,18 +1,18 @@
 import { LitElement, html, css } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
+import { customElement, property } from "lit/decorators.js";
 import { User } from "./types";
 
 @customElement("add-user-popup")
 export class AddUserPopup extends LitElement {
   @property({ type: Boolean }) showPopup = false;
-
-  @state() firstName = "";
-  @state() lastName = "";
-  @state() email = "";
-  @state() phone = "";
-  @state() role = "User"; // Default role
-
-  @state() errors: { [key: string]: string } = {}; // Object to store validation errors
+  @property({ type: Boolean }) showSuccessPopup = false;
+  @property() firstName = "";
+  @property() lastName = "";
+  @property() email = "";
+  @property() phone = "";
+  @property() role = "User";
+  @property() avatar = "";
+  @property() errors: Record<string, string> = {};
 
   static styles = css`
     .popup {
@@ -27,6 +27,19 @@ export class AddUserPopup extends LitElement {
       width: 300px;
       z-index: 1000;
     }
+    input, select, button {
+      width: 80%;
+      padding: 8px;
+      margin: 5px 0;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    button {
+      cursor: pointer;
+    }
+    .add-btn { background: #28a745; color: white; }
+    .cancel-btn { background: #dc3545; color: white; }
+    .error { color: red; font-size: 12px; }
     .overlay {
       position: fixed;
       top: 0;
@@ -36,121 +49,104 @@ export class AddUserPopup extends LitElement {
       background: rgba(0, 0, 0, 0.5);
       z-index: 999;
     }
-    input, select {
-      width: 100%;
-      padding: 8px;
-      margin: 8px 0;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-    }
-    button {
+    .success-popup {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #4CAF50;
+      color: white;
       padding: 10px;
-      margin: 5px;
-      border: none;
-      cursor: pointer;
       border-radius: 5px;
+      animation: fadeOut 2s ease-in-out;
     }
-    .add-btn {
-      background: #28a745;
-      color: white;
+    @keyframes fadeOut {
+      0% { opacity: 1; }
+      100% { opacity: 0; }
     }
-    .cancel-btn {
-      background: #dc3545;
-      color: white;
+    .avatar-preview {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      object-fit: cover;
+      display: block;
+      margin: 10px auto;
     }
-    .error {
-      color: red;
-      font-size: 12px;
-      margin-top: -5px;
-      text-align: left;
-    }
-
-    
   `;
 
-  private validateForm() {
-    this.errors = {};
-
-    if (!this.firstName.trim()) {
-      this.errors.firstName = "First Name is required";
-    }
-
-    if (!this.lastName.trim()) {
-      this.errors.lastName = "Last Name is required";
-    }
-
-    if (!this.email.trim()) {
-      this.errors.email = "Email is required";
-    } else if (!/\S+@\S+\.\S+/.test(this.email)) {
-      this.errors.email = "Invalid email format";
-    }
-
-    if (!this.phone.trim()) {
-      this.errors.phone = "Phone number is required";
-    } else if (!/^\d{10,}$/.test(this.phone)) {
-      this.errors.phone = "Phone number must be at least 10 digits";
-    }
-
-    return Object.keys(this.errors).length === 0;
+  validateForm(): boolean {
+    this.errors = {
+      ...(this.firstName.trim() ? {} : { firstName: "First Name is required" }),
+      ...(this.lastName.trim() ? {} : { lastName: "Last Name is required" }),
+      ...(/\S+@\S+\.\S+/.test(this.email) ? {} : { email: "Valid Email is required" }),
+      ...(/^\d{10,}$/.test(this.phone) ? {} : { phone: "Valid Phone number is required" })
+    };
+    this.requestUpdate();
+    return !Object.keys(this.errors).length;
   }
 
-  private handleAddUser() {
-    if (!this.validateForm()) {
-      this.requestUpdate(); // Re-render component to show errors
-      return;
-    }
-
+  handleAddUser() {
+    if (!this.validateForm()) return;
     const newUser: User = {
       firstName: this.firstName,
       lastName: this.lastName,
-      username: this.firstName.toLowerCase() + this.lastName.toLowerCase(),
+      username: `${this.firstName.toLowerCase()}${this.lastName.toLowerCase()}`,
       email: this.email,
       phone: this.phone,
-      role: this.role, // Get selected role
-      image: "https://via.placeholder.com/40",
+      role: this.role,
+      image: this.avatar || "https://static.vecteezy.com/system/resources/previews/008/442/086/original/illustration-of-human-icon-user-symbol-icon-modern-design-on-blank-background-free-vector.jpg",
     };
-
     this.dispatchEvent(new CustomEvent("user-added", { detail: { user: newUser }, bubbles: true, composed: true }));
+    this.showSuccessPopup = true;
+    setTimeout(() => this.showSuccessPopup = false, 3000);
     this.closePopup();
   }
 
-  private closePopup() {
+  handleAvatarUpload(event: Event) {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (file && file.type.startsWith("image/")) {
+      const reader = new FileReader();
+      reader.onload = () => { this.avatar = reader.result as string; this.requestUpdate(); };
+      reader.readAsDataURL(file);
+    } else {
+      this.errors.avatar = "Only image files are allowed.";
+      this.requestUpdate();
+    }
+  }
+
+  closePopup() {
+    this.showPopup = false;
+    this.avatar = "";
     this.dispatchEvent(new CustomEvent("close-popup", { bubbles: true, composed: true }));
   }
 
   render() {
-    if (!this.showPopup) return html``;
-
     return html`
-      <div class="overlay" @click="${this.closePopup}"></div>
-      <div class="popup">
-        <h3>Add New User</h3>
-
-        <input type="text" placeholder="First Name" 
-          @input="${(e: any) => (this.firstName = e.target.value)}" />
-        ${this.errors.firstName ? html`<div class="error">${this.errors.firstName}</div>` : ""}
-
-        <input type="text" placeholder="Last Name" 
-          @input="${(e: any) => (this.lastName = e.target.value)}" />
-        ${this.errors.lastName ? html`<div class="error">${this.errors.lastName}</div>` : ""}
-
-        <input type="email" placeholder="Email" 
-          @input="${(e: any) => (this.email = e.target.value)}" />
-        ${this.errors.email ? html`<div class="error">${this.errors.email}</div>` : ""}
-
-        <input type="tel" placeholder="Phone" 
-          @input="${(e: any) => (this.phone = e.target.value)}" />
-        ${this.errors.phone ? html`<div class="error">${this.errors.phone}</div>` : ""}
-
-        <select @change="${(e: any) => (this.role = e.target.value)}">
-          <option value="User" selected>User</option>
-          <option value="Moderator">Moderator</option>
-          <option value="Admin">Admin</option>
-        </select>
-
-        <button class="add-btn" @click="${this.handleAddUser}">Add User</button>
-        <button class="cancel-btn" @click="${this.closePopup}">Cancel</button>
-      </div>
+      ${this.showSuccessPopup ? html`<div class="success-popup">User added successfully!</div>` : ""}
+      ${this.showPopup ? html`
+        <div class="overlay" @click="${this.closePopup}"></div>
+        <div class="popup">
+          <h3>Add New User</h3>
+          <input type="text" placeholder="First Name" @input="${(e: any) => this.firstName = e.target.value}" />
+          ${this.errors.firstName ? html`<div class="error">${this.errors.firstName}</div>` : ""}
+          <input type="text" placeholder="Last Name" @input="${(e: any) => this.lastName = e.target.value}" />
+          ${this.errors.lastName ? html`<div class="error">${this.errors.lastName}</div>` : ""}
+          <input type="email" placeholder="Email" @input="${(e: any) => this.email = e.target.value}" />
+          ${this.errors.email ? html`<div class="error">${this.errors.email}</div>` : ""}
+          <input type="tel" placeholder="Phone" @input="${(e: any) => this.phone = e.target.value}" />
+          ${this.errors.phone ? html`<div class="error">${this.errors.phone}</div>` : ""}
+          <input type="file" accept="image/*" @change="${this.handleAvatarUpload}" />
+          ${this.errors.avatar ? html`<div class="error">${this.errors.avatar}</div>` : ""}
+          ${this.avatar ? html`<img src="${this.avatar}" class="avatar-preview" />` : ""}
+          <select @change="${(e: any) => this.role = e.target.value}">
+            <option value="User">User</option>
+            <option value="Moderator">Moderator</option>
+            <option value="Admin">Admin</option>
+          </select>
+          <button class="add-btn" @click="${this.handleAddUser}">Add User</button>
+          <button class="cancel-btn" @click="${this.closePopup}">Cancel</button>
+        </div>
+      ` : ""}
     `;
   }
 }

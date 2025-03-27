@@ -1,4 +1,4 @@
-// src/types.ts
+
 export interface User {
     firstName: string;
     lastName: string;

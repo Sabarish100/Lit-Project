@@ -82,8 +82,8 @@ export class UserTable extends LitElement {
         <tbody>
           ${paginatedUsers.map(
             (user) => html`
-              <tr>
-                <td><img src="${user.image}" /></td>
+              <tr> 
+                <td><img src="${user.image}"/></td>
                 <td>${user.firstName}</td>
                 <td>${user.lastName}</td>
                 <td>${user.username}</td>
